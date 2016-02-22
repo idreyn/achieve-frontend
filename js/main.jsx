@@ -1,4 +1,4 @@
-require('../style.css');
+require('../css/style.css');
 
 let React = require('react');
 let {render} = require('react-dom');
