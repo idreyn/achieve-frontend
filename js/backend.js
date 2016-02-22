@@ -1,5 +1,5 @@
+let xhr = require('xhr');
 let {Question, QuestionState} = require('./question.js');
-let xhr = require('./xhr');
 
 class Backend {
 	constructor() {
