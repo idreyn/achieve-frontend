@@ -16,11 +16,10 @@ class Backend {
 
 	submitResponse(question,response) {
 		if(!response) return;
-		console.log('submitting response...');
 		question.response = response;
 		question.state = QuestionState.WAITING;
 		return this.issueRequest('respond',{
-			id: question.id,
+			question: question.id,
 			response: question.response
 		}).then(function(res) {
 			question.correct = res.correct;
@@ -34,22 +33,25 @@ class Backend {
 	}
 }
 
-class HTTPBackend {
-	constructor(key) {
+class HTTPBackend extends Backend {
+	constructor(key,csrf) {
+		super();
 		this.key = key;
+		this.csrf = csrf;
 	}
 
 	issueRequest(type,data) {
 		return new Promise(resolve => {
 			xhr({
 				uri: '/quiz/' + this.key + '/' + type + '/',
-				body: data,
+				body: JSON.stringify(data),
+				method: 'POST',
 				headers: {
-					'content-type': 'application/json'
+					'Content-type': 'application/json; charset=utf-8',
+					'X-CSRFToken': this.csrf
 				}
 			},function(err,resp,body) {
-				console.log(err,resp,body);
-				resolve(resp);
+				resolve(JSON.parse(body));
 			});
 		});
 	}
@@ -101,5 +103,5 @@ class FakeBackend extends Backend {
 }
 
 module.exports = {
-	Backend: FakeBackend
+	Backend: HTTPBackend
 };

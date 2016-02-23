@@ -1,4 +1,5 @@
 @import url('node_modules/bootstrap/dist/css/bootstrap.min.css');
+@import url('katex.css');
 
 html, body {
 	width: 100%;
@@ -10,10 +11,15 @@ html, body {
 	top: 0;
 	height: 30px;
 	width: 100%;
+	z-index: 1;
 }
 
 #progress-top .progress, #progress-top .progress-bar {
 	height: 100%;
+}
+
+#progress-top.hidden {
+	display: none;
 }
 
 #progress-top span {
@@ -34,6 +40,11 @@ html, body {
 
 #main h3 {
 	margin-top: 0;
+}
+
+#quiz-text {
+	margin-top: 10px;
+	margin-bottom: 10px;
 }
 
 .quiz-question h3 {
@@ -60,6 +71,7 @@ html, body {
 }
 
 .quiz-question li label {
+	display: inline;
 	padding-left: 5px;
 }
 

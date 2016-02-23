@@ -1,12 +1,29 @@
 let React = require('react');
 let ReactDOM = require('react-dom');
+let marked = require('marked');
+let katex = require('katex');
 let {QuestionState} = require('./question.js');
+
+let RenderedViewer = React.createClass({
+	componentWillMount() {
+	    let text = this.props.text;  
+	    let regex = /\$\{(.*)\}/g;
+	    let rendered = marked(text).replace(regex,function(_,txt) {
+	    	var str = katex.renderToString(txt);
+	    	return str;
+	    });
+	    this.setState({rendered:rendered});
+	},
+    render() {
+        return <div dangerouslySetInnerHTML={{__html:this.state.rendered}} />;
+    }
+});
 
 let ProgressView = React.createClass({
 	render() {
 		let prog = Math.round((this.props.progress || 0) * 100)
 		return (
-			<div id='progress-top'>
+			<div id='progress-top' className={prog == 0 ? 'hidden' : ''}>
 				<div className='progress' style={{borderRadius:0}}>
 					<div
 					className={prog == 100 ? 'progress-bar progress-bar-success' : 'progress-bar'}
@@ -32,13 +49,13 @@ let QuizView = React.createClass({
 			<div id='wrapper'>
 				<ProgressView progress={this.getProgress()}/>
 				<div id='main'>
-					<h1>{this.props.title}</h1>
-					<h3>{this.props.achieverName}</h3>
-					<div>
-
+					<h1>{this.props.quiz.title}</h1>
+					<h3>{this.props.quiz.subtitle}</h3>
+					<div id='quiz-text'>
+						<RenderedViewer text={this.props.quiz.text}/>
 					</div>
 					<div id='questions'> {
-						this.props.questions.map((q,i) => <QuestionView key={i} question={q} onSubmit={this.props.onSubmit}/>)
+						this.props.quiz.questions.map((q,i) => <QuestionView key={i} question={q} onSubmit={this.props.onSubmit}/>)
 					} </div>
 				</div>
 			</div>
@@ -46,7 +63,7 @@ let QuizView = React.createClass({
 	},
 
 	getProgress() {
-		return this.props.questions.filter(q => q.state >= 2).length / this.props.questions.length;
+		return this.props.quiz.questions.filter(q => q.state >= 2).length / this.props.quiz.questions.length;
 	}
 })
 
@@ -72,7 +89,7 @@ let QuestionView = React.createClass({
 				<form>
 					<ul>
 						{
-							Object.keys(qs.choices).map(key => (
+							Object.keys(qs.choices).sort().map(key => (
 								<li key={key} className={key == qs.correct ? 'correct' : (qs.correct && key == qs.response ? 'incorrect' : '')}>
 									<input 
 										id={"radio-" + qs.index + "-" + key}

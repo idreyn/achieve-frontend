@@ -6,6 +6,7 @@ let $ = require('jquery');
 let {Question} = require('./question.js');
 let {QuizView, QuestionView} = require('./views.jsx');
 let {Backend} = require('./backend');
+let {retrieveCSRFToken} = require('./csrf.js');
 
 class QuizController {
 	constructor(backend) {
@@ -13,7 +14,9 @@ class QuizController {
 		this.questions = [];
 		this.update = this._update.bind(this);
 		this.backend.retrieveQuiz().then((resp) => {
-			this.title = [resp.title,resp.subtitle];
+			document.title = resp.title;
+			this.title = resp.title;
+			this.subtitle = resp.subtitle;
 			this.text = resp.text;
 			this.achiever = resp.achiever;
 			this.questions = resp.questions.map((q,i) => new Question(
@@ -23,7 +26,8 @@ class QuizController {
 				i + 1,
 				q.state,
 				q.response,
-				q.correct
+				q.correct,
+				q.explanation
 			));
 			this.update();
 		});
@@ -32,9 +36,7 @@ class QuizController {
 	_update() {
 		render(
 			<QuizView
-				title={this.title}
-				achieverName={this.achieverName}
-				questions={this.questions}
+				quiz={this}
 				onSubmit={this.handleSubmit.bind(this)}
 			/>,
 			document.getElementById('container')
@@ -47,6 +49,7 @@ class QuizController {
 	}
 }
 
-let backend = new Backend();
+window.jQuery = $;
+let key = window.location.pathname.split('/')[2];
+let backend = new Backend(key,retrieveCSRFToken());
 let qc = new QuizController(backend);
-window.update = qc.update;
