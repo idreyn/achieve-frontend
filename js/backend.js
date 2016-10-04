@@ -1,49 +1,16 @@
+let {retrieveCSRFToken} = require('./csrf.js');
 let xhr = require('xhr');
-let {Question, QuestionState} = require('./question.js');
 
-class Backend {
-	constructor() {
-
-	}
-
-	issueRequest() {
-		throw new Error("Don't use Backend directly");
-	}
-
-	retrieveQuiz() {
-		return this.issueRequest('retrieve');
-	}
-
-	submitResponse(question,response) {
-		if(!response) return;
-		question.response = response;
-		question.state = QuestionState.WAITING;
-		return this.issueRequest('respond',{
-			question: question.id,
-			response: question.response
-		}).then(function(res) {
-			question.correct = res.correct;
-			question.explanation = res.explanation;
-			if(res.correct == response) {
-				question.state = QuestionState.CORRECT;
-			} else {
-				question.state = QuestionState.INCORRECT;
-			}
-		});	
-	}
-}
-
-class HTTPBackend extends Backend {
-	constructor(key,csrf) {
-		super();
-		this.key = key;
-		this.csrf = csrf;
+class HTTPBackend {
+	constructor(root) {
+		this.root = root;
+		this.csrf = retrieveCSRFToken();
 	}
 
 	issueRequest(type,data) {
 		return new Promise(resolve => {
 			xhr({
-				uri: '/quiz/' + this.key + '/' + type + '/',
+				uri: '/' + this.root + '/' + type + '/',
 				body: JSON.stringify(data),
 				method: 'POST',
 				headers: {
@@ -57,7 +24,7 @@ class HTTPBackend extends Backend {
 	}
 }
 
-class FakeBackend extends Backend {
+class FakeBackend {
 	issueRequest(type,data) {
 		return new Promise((fulfill) => {
 			setTimeout(() => {
@@ -76,7 +43,9 @@ class FakeBackend extends Backend {
 			case 'retrieve':
 				return {
 					id: 0,
-					name: "OTA #0: The Testening",
+					title: "OTA #0: The Testening",
+					subtitle: "An OTA about testing",
+					text: "This is the text of the OTA",
 					achieverName: "Test Achiever",
 					questions: [
 						{
@@ -102,6 +71,4 @@ class FakeBackend extends Backend {
 	}
 }
 
-module.exports = {
-	Backend: HTTPBackend
-};
+module.exports = {HTTPBackend: HTTPBackend};
