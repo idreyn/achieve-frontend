@@ -71,4 +71,4 @@ class FakeBackend {
 	}
 }
 
-module.exports = {HTTPBackend: HTTPBackend};
+module.exports = {HTTPBackend: HTTPBackend, FakeBackend: FakeBackend};

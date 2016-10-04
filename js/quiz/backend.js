@@ -1,5 +1,5 @@
 let {Question, QuestionState} = require('./quiz.js');
-let {HTTPBackend} = require('../backend.js');
+let {HTTPBackend, FakeBackend} = require('../backend.js');
 
 class Backend extends HTTPBackend {
 	constructor(key) {
