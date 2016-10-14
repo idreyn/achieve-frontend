@@ -1,0 +1,68 @@
+#edit-pane {
+	width: 100%;
+}
+
+.draggable-item {
+	display: flex;
+	flex-direction: horizontal;
+}
+
+.placeholder {
+	visibility: none;
+}
+
+.draggable-item.dragged {
+	opacity: 0.7;
+}
+
+.draggable-item-inner {
+	width: 100%;
+}
+
+.drag-handle {
+	cursor: ns-resize !important;
+	width: 20px;
+	margin-right: 0px;
+	background: #333;
+}
+
+.rendered-view p {
+	margin: 0;
+}
+
+.question {
+	margin: 10px;
+	padding: 10px;
+	background: #EEE;
+}
+
+.question-choice {
+	cursor: pointer;
+	background: #CCC;
+	margin: 10px;
+}
+
+.question-choice-content {
+	display: flex;
+	align-items: center
+	width: 100%;
+	padding: 10px;
+}
+
+.content-editor {
+	margin-left: 10px;
+	width: 100%;
+	flex: 1;
+}
+
+.content-editor textarea {
+	font-size: 0.8em;
+	font-family: monospace;
+	width: 100%;
+	max-width: 100%;
+	padding: 4px;
+}
+
+.selected {
+	opacity: 0;
+}

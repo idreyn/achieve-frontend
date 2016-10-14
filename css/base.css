@@ -1,0 +1,9 @@
+@import url('katex.css');
+
+#main {
+	padding-top: 30px;
+	max-width: 800px;
+	width: 95%;
+	margin: auto;
+	position: relative;
+}

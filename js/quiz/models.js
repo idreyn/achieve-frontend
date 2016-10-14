@@ -8,22 +8,26 @@ let QuestionState = {
 };
 
 class Progress extends Model {
-	constructor(quizzes) {
+	constructor(quizzes, name) {
 		super();
 		this.quizzes = quizzes;
+		this.name = name;
 	}
 }
 
 Progress.fromResponse = function(resp, progress) {
 	progress = progress || new Progress();
+	progress.name = resp.name;
+	progress.milestones = resp.milestones;
 	progress.quizzes = resp.quizzes.map(
 		(quiz) => ({
 			title: quiz.title,
 			key: quiz.key,
 			totalQuestions: quiz.total_questions,
-			responses: quiz.completed_questions
+			completedQuestions: quiz.completed_questions
 		})
 	);
+	console.log(progress);
 	return progress;
 }
 
@@ -72,6 +76,10 @@ class Question extends Model {
 					QuestionState.INCORRECT
 			) : QuestionState.NOT_ANSWERED;
 		}
+	}
+
+	hasResponse() {
+		return this.state > 1;
 	}
 }
 

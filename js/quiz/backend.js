@@ -1,4 +1,4 @@
-let {Question, QuestionState} = require('./quiz.js');
+let {Question, QuestionState} = require('./models.js');
 let {HTTPBackend, FakeBackend} = require('../backend.js');
 
 class Backend extends HTTPBackend {
@@ -8,6 +8,14 @@ class Backend extends HTTPBackend {
 
 	retrieveQuiz() {
 		return this.issueRequest('retrieve');
+	}
+
+	retrieveProgress() {
+		return this.issueRequest('progress');
+	}
+
+	claimMilestone() {
+		return this.issueRequest('claim');
 	}
 
 	submitResponse(question,response) {

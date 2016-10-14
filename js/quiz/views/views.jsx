@@ -2,25 +2,25 @@ let React = require('react');
 let ReactDOM = require('react-dom');
 let classNames = require("classnames");
 
-let {QuestionState} = require('./quiz.js');
-let RenderedView = require("./rendered-view.jsx");
-let ProgressView = require("./progress-view.jsx");
+let {QuestionState} = require('../models.js');
+let AnswerIndicator = require("./answer-indicator.jsx");
+let RenderedView = require("./rendered.jsx");
+let ProgressView = require("./progress.jsx");
 
 let {
 	Button,
 	Card, CardTitle, CardActions, CardText,
-	IconToggle,
 	RadioGroup, Radio,
 } = require("react-mdl");
 
 let QuizView = React.createClass({
 	render() {
-		let {onSubmit, progress, quiz} = this.props;
+		let {onSubmit, onClaimMilestone, progress, quiz} = this.props;
 		return (
 			<div id='wrapper'>
 				<div id='main'>
 					{progress && 
-						<ProgressView progress={progress}/>}
+					<ProgressView progress={progress} quiz={quiz} onClaimMilestone={onClaimMilestone}/>}
 					<div id='header'>
 						<h2>{quiz.title}</h2>
 						<h4>{quiz.subtitle}</h4>
@@ -41,16 +41,6 @@ let QuizView = React.createClass({
 			</div>
 		);
 	},
-})
-
-let AnswerIndicator = React.createClass({
-	render() {
-		let {correct, incorrect} = this.props;
-		return <span style={{pointerEvents: "none"}}>
-			{correct && <IconToggle className="correct" name="checked"/>}
-			{incorrect && <IconToggle className="incorrect" name="close"/>}
-		</span>
-	}
 })
 
 let QuestionView = React.createClass({
@@ -145,4 +135,4 @@ let QuestionView = React.createClass({
 	}
 })
 
-module.exports = {RenderedView, QuizView, QuestionView};
+module.exports = {QuizView, QuestionView};
