@@ -14,15 +14,8 @@ let {Backend} = require('./backend.js');
 class Controller {
 	constructor(backend) {
 		this.update();
-		this.backend = backend;
-		this.backend.retrieveQuiz().then((resp) => {
-			this.quiz = new Quiz();
-			this.quiz.extend(resp);
-			this.quiz.questions = resp.questions.map((data, i) => {
-				const q = new Question();
-				q.setup(data);
-				return q;
-			});
+		backend.retrieveQuiz().then((resp) => {
+			this.quiz = new Quiz(resp);
 			this.update();
 		});
 	}

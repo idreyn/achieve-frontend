@@ -1,9 +1,50 @@
 @import url('katex.css');
 
-#main {
-	padding-top: 30px;
+html, body {
+	height: 100%;
+	margin: 0;
+	background: #2196F3;
+}
+
+#app-frame-bkg {
+	position: absolute;
+	width: 100%;
+	height: 208px;
+	left: 0;
+	background: rgba(0, 0, 0, 0.2);
+}
+
+#app-frame-outer {
+	display: flex;
+	width: 100%;
 	max-width: 800px;
-	width: 95%;
-	margin: auto;
-	position: relative;
+	flex-direction: column;
+	padding-bottom: 20px;
+	width: 100%;
+	min-height: calc(100% - 40px);
+	margin: 0 auto;
+}
+
+#app-frame-outer {
+	color: #FFF;
+}
+
+#app-frame-outer h3 {
+	z-index: 1;
+	margin-bottom: 5px;
+}
+
+#app-frame {
+	color: #000;
+	align-items: stretch;
+	border-radius: 5px;
+	background: rgba(255, 255, 255, 0.9);
+	overflow: hidden;
+	flex: 1;
+	z-index: 1;
+}
+
+.app-frame-content {
+	padding: 4px;
+	padding-top: 0;
 }

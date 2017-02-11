@@ -1,13 +1,21 @@
 let React = require('react');
-let marked = require('marked');
+let Remarkable = require('remarkable');
 let katex = require('katex');
 
 let RenderedView = React.createClass({
 	componentWillMount() {
 	    let text = this.props.text;  
 	    let regex = /\$\{(.*)\}/g;
-	    let rendered = marked(this.katexify(text));
+	    let rendered = this.renderText(text);
 	    this.setState({rendered});
+	},
+
+	renderText: function(text) {
+		return this.markdown(this.katexify(text));
+	},
+
+	markdown: function(text) {
+		return new Remarkable('full', {html: true}).render(text);
 	},
 
 	katexify: function(text) {
@@ -35,9 +43,8 @@ let RenderedView = React.createClass({
 
 	componentWillReceiveProps(nextProps) {
 		if (nextProps.text !== this.props.text) {
-			console.log(nextProps);
 			this.setState({
-				rendered: marked(this.katexify(nextProps.text)),
+				rendered: this.renderText(nextProps.text),
 			});
 		}
 	},

@@ -45,7 +45,7 @@ class QuizController {
 		);
 	}
 
-	handleSubmit(q,r) {
+	handleSubmit(q, r) {
 		return this.backend
 			.submitResponse(q,r)
 			.then(this.update.bind(this))

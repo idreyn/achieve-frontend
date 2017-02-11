@@ -1,44 +1,121 @@
 const Model = require('../model.js');
 
 class Quiz extends Model {
-	
+	constructor(object) {
+		super();
+		this.extend(object);
+		this.questions = object.questions.map(
+			(d, i) => new Question(d, i)
+		);
+	}
+
+	reorder(arr) {
+		// Sanity check
+		if (arr.filter(
+			(e) => this.questions.indexOf(e) === -1
+		).length > 0) {
+			throw new Error("Must reorder with a permutation.");
+		}
+		this.questions = arr;
+		this.normalize();
+	}
+
+	addQuestion() {
+		let qs = new Question({}, this.questions.length);
+		this.questions.push(qs);
+		return qs;
+	}
+
+	deleteQuestion(qs) {
+		this.questions = this.questions.filter(
+			(q) => q !== qs
+		);
+		this.normalize();
+	}
+
+	setTitle(txt) {
+		this.title = txt;
+	}
+
+	normalize() {
+		this.questions.forEach(
+			(qs, i) => { qs.index = i; }
+		);
+	}
 }
 
-const CHOICE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
 class Question extends Model {
-	setup(object) {
-		this.extend(object);
+	constructor(object, index) {
+		super();
+		this.id = object.id;
+		this.text = object.text || "";
+		this.explanation = object.explanation;
+		this.index = index;
+		this.choices = Object.keys(object.choices || [])
+			.sort()
+			.map((index, n) => {
+				// index is a letter like A, B, C, D
+				const qc = new QuestionChoice(object.choices[index], n);
+				if (index === object.correct) {
+					this.correct = qc;
+				}
+				return qc;
+			});
 	}
 
-	updateAnswer(key, value) {
-		console.log('updateAnswer!');
-		this.choices[key] = value;
+	addChoice(text) {
+		this.choices.push(
+			new QuestionChoice(text, this.choices.length)
+		);
+		this.normalize();
 	}
 
-	renderChoices() {
-		return Object.keys(this.choices).sort().map((index, num) => {
-			return {
-				num: num,
-				index: index,
-				value: this.choices[index],
-				correct: index === this.correct,
-			};
-		});
+	setCorrectChoice(qc) {
+		if(this.choices.indexOf(qc) > -1 ) {
+			this.correct = qc;
+		} else {
+			throw new Error("Correct choice must be an element of choices.");
+		}
 	}
 
-	buildChoices(arr) {
-		const choices = {};
-		arr.forEach((item, i) => {
-			const value = item.value;
-			const oldIndex = item.index;
-			const newIndex = CHOICE_ALPHABET[i];
-			choices[newIndex] = value;
-			if (oldIndex === this.correct) {
-				this.correct = newIndex;
-			}
-		});
-		this.choices = choices;
+	deleteChoice(qc) {
+		this.choices = this.choices.filter((c) => c !== qc);
+		this.normalize();
+	}
+
+	setExplanation(txt) {
+		this.explanation = txt;
+	}
+
+	reorder(arr) {
+		// Sanity check
+		if (arr.filter(
+			(e) => this.choices.indexOf(e) === -1
+		).length > 0) {
+			throw new Error("Must reorder with a permutation.");
+		}
+		this.choices = arr;
+		this.normalize();
+	}
+
+	normalize() {
+		// Keep the invariants alive!
+		this.choices.forEach(
+			(qc, i) => { qc.index = i; }
+		);
+		if (!this.correct || this.choices.indexOf(this.correct) === -1) {
+			this.correct = this.choices[0];
+		}
+	}
+}
+
+Question.CHOICE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+class QuestionChoice extends Model {
+	constructor(text, index) {
+		super();
+		this.text = text;
+		this.index = index;
 	}
 }
 

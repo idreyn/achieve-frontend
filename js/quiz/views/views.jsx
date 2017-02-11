@@ -47,13 +47,14 @@ let QuestionView = React.createClass({
 	getInitialState() {
 	    return {
 	    	response: "",
+	    	submitPressed: false,
 	    };
 	},
 	render() {
 		let {question} = this.props;
-		let {response, wantsExplanation} = this.state;
+		let {response, wantsExplanation, submitPressed} = this.state;
 		let submitted = question.response != null || 
-			question.state == QuestionState.WAITING;
+			question.state === QuestionState.WAITING;
 		let answered = question.state >= 2;
 		let correctChoice = answered && question.correct;
 		let incorrectChoice = answered && 
@@ -113,11 +114,13 @@ let QuestionView = React.createClass({
 					) : (
 						response && <Button 
 							raised colored ripple 
-							disabled={submitted} 
-							onClick={this.onSubmit}
+							disabled={submitPressed} 
+							onClick={() => {
+								this.setState({submitPressed: true});
+								this.onSubmit();
+							}}
 						>
-							{question.state == QuestionState.WAITING ? 
-								"Submitting..." : "Submit"}
+							{submitPressed ? "Submitting..." : "Submit"}
 						</Button> 
 					)}
 				</CardActions>}

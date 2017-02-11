@@ -27,7 +27,6 @@ Progress.fromResponse = function(resp, progress) {
 			completedQuestions: quiz.completed_questions
 		})
 	);
-	console.log(progress);
 	return progress;
 }
 

@@ -18,7 +18,7 @@ class Backend extends HTTPBackend {
 		return this.issueRequest('claim');
 	}
 
-	submitResponse(question,response) {
+	submitResponse(question, response) {
 		if(!response) return;
 		question.response = response;
 		question.state = QuestionState.WAITING;

@@ -2,16 +2,15 @@
 <html>
 	<head>
 		<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-		<script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
-		<link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.blue-green.min.css" />
-		<title>{% block title %}{% endblock %}</title>
+		<link href="css/icons.css" rel="stylesheet">
+		<script defer src="js/lib/material.min.js"></script>
+		<link rel="stylesheet" href="https://code.getmdl.io/1.2.1/material.blue-green.min.css" />
+		<title>Quiz Builder Tests</title>
 		<script type='text/javascript'> 
 			var STATIC_URL = '{{STATIC_URL}}'; 
 		</script>
 	</head>
 	<body>
-		{% csrf_token %}
 		<div id='container'>
 			<!-- Everything in the app is mounted here from JSX -->
 		</div>
