@@ -62,7 +62,9 @@ class QuizController {
 }
 
 $(function() {
-	let key = window.location.pathname.split('/')[2];
-	let backend = new Backend(key);
-	let qc = new QuizController(backend);
+	const parts = window.location.pathname.split('/'),
+		isManager = parts[1] === "manage",
+		key = parts[2],
+		backend = new Backend(key, isManager),
+		qc = new QuizController(backend);
 });

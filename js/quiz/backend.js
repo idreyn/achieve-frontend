@@ -2,8 +2,8 @@ let {Question, QuestionState} = require('./models.js');
 let {HTTPBackend, FakeBackend} = require('../backend.js');
 
 class Backend extends HTTPBackend {
-	constructor(key) {
-		super('quiz/' + key);
+	constructor(key, isManager) {
+		super((isManager ? 'manage/' : 'quiz/') + key);
 	}
 
 	retrieveQuiz() {

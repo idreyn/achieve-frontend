@@ -4,9 +4,14 @@ let Reorder = require('react-reorder');
 let FontAwesome = require('react-fontawesome');
 let classNames = require("classnames");
 
+let CodeMirror = require("react-codemirror");
+require('codemirror/mode/markdown/markdown');
+require("codemirror/lib/codemirror.css");
+
 let {AppFrame, DragHandle} = require("./../base/views.jsx");
 let ContentEditor = require("./../base/content-editor.jsx");
 
+let {SaveState} = require('./backend.js');
 let {Quiz, Question} = require('./quiz.js');
 let RenderedView = require('../quiz/views/rendered.jsx');
 
@@ -15,7 +20,9 @@ let {
 	Card, CardTitle, CardText, CardActions,
 	Dialog, DialogTitle, DialogContent, DialogActions,
 	Icon, IconButton,
+	Radio, RadioGroup,
 	Tabs, Tab,
+	Textfield,
 	Tooltip
 } = require("react-mdl");
 
@@ -34,17 +41,70 @@ let QuizBuilder = React.createClass({
 
 	componentDidMount() {
 		// Ugh
+		this.getQuizID();
 		setTimeout(() => {
 			this.wantsToExpandQuestion = true;
 		}, 100);
 	},
 
 	componentDidUpdate(prevProps, prevState) {
-		this.wantsToExpandQuestion = this.isEditingQuestions();
+		this.wantsToExpandQuestion = this.isEditingQuestions() &&
+			!this.state.inPreview;
+		if (this.isEditingMarkdown()) {
+			const height = this.refs.builder.getBoundingClientRect().height;
+			const cm = this.refs.editor.getCodeMirror();
+			cm.setSize("100%", height);
+		}
+	},
+
+	getQuizID() {
+		return window.location.pathname.split("/")[2];
+	},
+
+	getMarkdown() {
+		let {quiz} = this.props;
+		if (this.isEditingBody()) {
+			return quiz.text;
+		} else {
+			return "";
+		}
+	},
+
+	setMarkdown(text) {
+		let {quiz} = this.props;
+		if (this.isEditingBody()) {
+			quiz.text = text;
+		}
+		this.props.onUpdate();
+	},
+
+	componentDidUpdate(prevProps, prevState) {
+		const {quiz} = this.props;
+		if (prevProps.quiz !== quiz) {
+			if (this.state.expandedQuestion) {
+				this.setState({
+					expandedQuestion: quiz.questions.filter(
+						(q) => q.index === this.state.expandedQuestion.index
+					)[0],
+				});
+			}
+		}
 	},
 
 	isEditingQuestions() {
 		return this.state.activeTab === 2;
+	},
+
+	isEditingBody() {
+		return this.state.activeTab === 1;
+	},
+
+	isEditingEmail() {
+		return this.state.activeTab === 0;
+	},
+
+	isEditingMarkdown() {
+		return !this.isEditingQuestions();
 	},
 
 	expandQuestion(qs, el) {
@@ -58,7 +118,7 @@ let QuizBuilder = React.createClass({
 
 	handleCreateQuestion(qs, el) {
 		if (this.wantsToExpandQuestion) {
-			this.expandQuestion(qs, el);
+			// this.expandQuestion(qs, el);
 		}
 	},
 
@@ -67,18 +127,23 @@ let QuizBuilder = React.createClass({
 		if (this.state.expandedQuestion === qs) {
 			this.setState({expandedQuestion: null});
 		}
+		this.props.onUpdate();
 		this.forceUpdate();
 	},
 
 	handleAddQuestion() {
 		var qs = this.props.quiz.addQuestion();
-		this.forceUpdate();
+		this.props.onUpdate();
 	},
 
 	togglePreview: function() {
-		this.setState({
-			inPreview: !this.state.inPreview,
-		});
+		if (!this.state.inPreview) {
+			this.props.onSave().then(
+				() => this.setState({inPreview: true})
+			); 
+		} else {
+			this.setState({inPreview: false});
+		}
 	},
 
 	renderHeader() {
@@ -93,7 +158,7 @@ let QuizBuilder = React.createClass({
 					inputStyle={{color: "#FFF", fontFamily: "inherit"}}
 					onContentUpdate={(c) => {
 						quiz.title = c;
-						this.forceUpdate();
+						this.props.onUpdate();
 					}}
 				/>
 			</div>
@@ -106,7 +171,7 @@ let QuizBuilder = React.createClass({
 					inputStyle={{color: "#FFF", fontFamily: "inherit"}}
 					onContentUpdate={(c) => {
 						quiz.subtitle = c;
-						this.forceUpdate();
+						this.props.onUpdate();
 					}}
 				/>
 			</div>
@@ -114,7 +179,7 @@ let QuizBuilder = React.createClass({
 	},
 
 	renderCurrentEditor() {
-		let {quiz} = this.props;
+		let {quiz, saveState, onUpdate} = this.props;
 		let {activeTab, expandedQuestion} = this.state;
 		if (this.isEditingQuestions()) {
 			return <QuestionList
@@ -124,28 +189,44 @@ let QuizBuilder = React.createClass({
 				onCloseQuestion={this.closeAllQuestions}
 				onCreateQuestion={this.handleCreateQuestion}
 				onDeleteQuestion={this.handleDeleteQuestion}
+				onUpdate={onUpdate}
 			/>;
+		} else {
+			return <CodeMirror 
+				ref="editor"
+				value={this.getMarkdown()}
+				onChange={this.setMarkdown}
+				options={{
+					lineNumbers: true,
+					lineWrapping: true,
+					mode: "markdown"
+				}}
+			/>
 		}
 	},
 
-	render() {
-		let {quiz} = this.props;
+	renderMain() {
+		let {quiz, onSave, saveState} = this.props;
 		let {inPreview} = this.state;
-		if(!quiz) {
-			return <div>
-				Hold on a damn second...
-			</div>;
-		}
+		let savingText = {
+			[SaveState.SAVED]: "Saved",
+			[SaveState.SAVING]: "Saving...",
+			[SaveState.DIRTY]: "Save",
+		}[saveState];
 		return <AppFrame
 			className={inPreview && "builder-preview"}
 			headerContent={this.renderHeader()}
 		>
 			<div id="builder-header">
 				<Tabs
+					ripple
 					style={{width: "50%"}}
 					activeTab={this.state.activeTab}
-					onChange={(i) => this.setState({activeTab: i})}
-					ripple
+					onChange={(i) => {
+						if (this.state.activeState !== i) {
+							this.setState({activeTab: i});
+						}
+					}}
 				>
 					<Tab href="javascript:void(0)">Email</Tab>
 					<Tab href="javascript:void(0)">Body text</Tab>
@@ -156,11 +237,16 @@ let QuizBuilder = React.createClass({
 						<Tooltip label="Add question">
 							<IconButton
 								ripple
+								className="icon-button"
 								onClick={this.handleAddQuestion}
 								name="add"
 							/> 
 						</Tooltip>:
-						<Button ripple onClick={this.handleAddQuestion}>
+						<Button
+							className="icon-button"
+							ripple 
+							onClick={this.handleAddQuestion}
+						>
 							<Icon name="add"/>
 							Add
 						</Button>
@@ -169,38 +255,71 @@ let QuizBuilder = React.createClass({
 						<Tooltip label="Hide preview">
 							<IconButton
 								ripple
+								className="icon-button"
 								onClick={this.togglePreview}
 								name="visibility_off"
 							/> 
 						</Tooltip>:
-						<Button ripple onClick={this.togglePreview}>
+						<Button
+							className="icon-button"
+							ripple
+							onClick={this.togglePreview}
+						>
 							<Icon name="remove_red_eye"/>
 							Preview
 						</Button>
 					}
 					{inPreview ?
-						<Tooltip label="Save changes">
+						<Tooltip label={savingText}>
 							<IconButton
+								disabled={saveState !== SaveState.DIRTY}
+								className="icon-button"
 								ripple
+								onClick={onSave}
 								name="save"
 							/>
 						</Tooltip> :
-						<Button ripple>
+						<Button
+							disabled={saveState !== SaveState.DIRTY}
+							className="icon-button"
+							ripple
+							onClick={onSave}
+						>
 							<Icon name="save"/>
-							Save
+							{savingText}
 						</Button>
 					}
-					<Button ripple raised colored>
+					<Button ripple raised colored className="icon-button">
 						<Icon name="send"/>
 						Send
 					</Button>
 				</div>
 			</div>
-			<section id="builder" className="app-frame-content">
+			<section id="builder" ref="builder" className="app-frame-content">
 				{this.renderCurrentEditor()}
 			</section>
+			<DeployManager open={false} quiz={quiz}/>
 		</AppFrame>;
-	}
+	},
+
+	render() {
+		let {quiz, saveState} = this.props;
+		let {inPreview} = this.state;
+		if(!quiz) {
+			return <div>
+				Hold on a damn second...
+			</div>;
+		}
+		if (inPreview) {
+			return <div id="preview-container">
+				{this.renderMain()}
+				<QuizPreview id={this.getQuizID()} saveState={saveState} />
+			</div>
+		} else {
+			return this.renderMain();
+		}
+	},
+
 });
 
 let QuestionList = React.createClass({
@@ -209,6 +328,7 @@ let QuestionList = React.createClass({
 		onCloseQuestion: React.PropTypes.func.isRequired,
 		onExpandQuestion: React.PropTypes.func.isRequired,
 		onCreateQuestion: React.PropTypes.func.isRequired,
+		onUpdate: React.PropTypes.func.isRequired,
 		quiz: React.PropTypes.instanceOf(Quiz).isRequired,
 	},
 
@@ -227,6 +347,8 @@ let QuestionList = React.createClass({
 	handleReorder(...args) {
 		const newOrder = args[4];
 		this.props.quiz.reorder(newOrder);
+		console.log(this.props.quiz.questions);
+		this.props.onUpdate();
 	},
 
 	DraggableQuestion(props) {
@@ -243,6 +365,7 @@ let QuestionList = React.createClass({
 					onDelete={() => this.props.onDeleteQuestion(qs)}
 					onClose={this.props.onCloseQuestion}
 					onCreate={this.props.onCreateQuestion}
+					onUpdate={this.props.onUpdate}
 				/>
 			</div>
 		</div>;
@@ -278,6 +401,7 @@ let QuestionView = React.createClass({
 		onCreate: React.PropTypes.func,
 		onExpand: React.PropTypes.func,
 		onDelete: React.PropTypes.func.isRequired,
+		onUpdate: React.PropTypes.func.isRequired,
 		quiz: React.PropTypes.instanceOf(Quiz).isRequired,
 		question: React.PropTypes.instanceOf(Question).isRequired,
 	},
@@ -312,15 +436,23 @@ let QuestionView = React.createClass({
 
 	handleUpdateChoice(qc, value) {
 		qc.text = value;
+		this.props.onUpdate();
 	},
 
 	handleSetCorrectChoice(qc) {
 		this.props.question.setCorrectChoice(qc);
+		this.props.onUpdate();
+		this.forceUpdate();
+	},
+
+	handleAddChoice(text) {
+		this.props.question.addChoice(text);
 		this.forceUpdate();
 	},
 
 	handleDeleteChoice(qc) {
 		this.props.question.deleteChoice(qc);
+		this.props.onUpdate();
 		this.forceUpdate();
 	},
 
@@ -336,10 +468,17 @@ let QuestionView = React.createClass({
 	handleReorder(...args) {
 		const newOrder = args[4];
 		this.props.question.reorder(newOrder);
+		this.props.onUpdate();
 	},
 
 	handleUpdateText(c) {
 		this.props.question.text = c;
+		this.props.onUpdate();
+	},
+
+	handleUpdateExplanation(text) {
+		this.props.question.setExplanation(text);
+		this.props.onUpdate();
 		this.forceUpdate();
 	},
 
@@ -389,8 +528,7 @@ let QuestionView = React.createClass({
 								multiline={false}
 								onContentUpdate={(text) => {
 									if (text && text.length) {
-										question.addChoice(text);
-										this.forceUpdate();
+										this.handleAddChoice(text);
 										return true;
 									}
 								}}
@@ -402,8 +540,7 @@ let QuestionView = React.createClass({
 						<Card shadow={0}>
 							<ContentEditor
 								onContentUpdate={(text) => {
-									question.setExplanation(text);
-									this.forceUpdate();
+									this.handleUpdateExplanation(text);
 									return true;
 								}}
 								content={question.explanation}
@@ -452,7 +589,8 @@ let QuestionChoice = React.createClass({
 	},
 
 	render() {
-		let {choice, correct, onDelete, onSelectAsCorrect} = this.props;
+		let {choice, correct, onDelete, 
+			onSelectAsCorrect, onContentUpdate} = this.props;
 		let {deleting, hover} = this.state;
 		return <Card
 			shadow={0}
@@ -463,9 +601,7 @@ let QuestionChoice = React.createClass({
 			<ContentEditor
 				content={choice.text.toString()}
 				multiline={false}
-				onContentUpdate={(val) => 
-					this.props.onContentUpdate(choice, val)
-				}
+				onContentUpdate={(val) => onContentUpdate(choice, val)}
 			/>
 			<div className='question-choice-tools'>
 				<IconButton
@@ -502,4 +638,63 @@ let QuestionChoice = React.createClass({
 	}
 });
 
-module.exports = {QuizBuilder, QuestionView};
+let QuizPreview = React.createClass({
+	propTypes: {
+		id: React.PropTypes.string.isRequired,
+		saveState: React.PropTypes.oneOf(Object.values(SaveState)).isRequired,
+	},
+
+	componentDidUpdate(prevProps, prevState) {
+		if (prevProps.saveState === SaveState.SAVING && 
+			this.props.saveState === SaveState.SAVED) {
+			this.refs.frame.contentWindow.location.reload();
+		}
+	},
+
+	render() {
+		const {id} = this.props;
+		return <iframe ref="frame" src={"/manage/" + id + "/view/"}/>;
+	},
+});
+
+let DeployManager = React.createClass({
+	propTypes: {
+		quiz: React.PropTypes.instanceOf(Quiz).isRequired,
+		open: React.PropTypes.bool.isRequired,
+	},
+
+	render() {
+		return <Dialog open={this.props.open} style={{width: 500}}>
+			<DialogTitle>Ready to deploy?</DialogTitle>
+			<DialogContent>
+				<p>You are about to deploy this quiz to all Achievers.</p>
+				<p>Once it is sent, you will no longer be able to re-deploy the
+				quiz or add/delete questions, so take a moment to make sure
+				everything looks okay. When you're ready, you can deploy or 
+				perform a dry run here.</p>
+				<RadioGroup name="action" value="dry-run" childContainer="div">
+					<Radio value="dry-run" ripple>
+						Send a test message to
+						<Textfield 
+							label="Email address"
+							floatingLabel
+							style={{display: "inline"}}
+						/>
+					</Radio>
+					<Radio value="real-thing">
+						Deploy to all Achievers!
+					</Radio>
+				</RadioGroup>
+			</DialogContent>
+			<DialogActions>
+				<Button raised colored ripple className="icon-button">
+					<Icon name="thumb_up"/>
+					Let's go
+				</Button>
+				<Button>Cancel</Button>
+			</DialogActions>
+		</Dialog>
+	}
+});
+
+module.exports = {QuizBuilder};

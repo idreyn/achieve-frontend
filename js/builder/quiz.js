@@ -42,6 +42,16 @@ class Quiz extends Model {
 			(qs, i) => { qs.index = i; }
 		);
 	}
+
+	serialize() {
+		return {
+			id: this.id,
+			title: this.title,
+			subtitle: this.subtitle,
+			text: this.text,
+			questions: this.questions.map(q => q.serialize())
+		}
+	}
 }
 
 class Question extends Model {
@@ -78,6 +88,10 @@ class Question extends Model {
 		}
 	}
 
+	letterForChoice(qc) {
+		return Question.CHOICE_ALPHABET[this.choices.indexOf(qc)];
+	}
+
 	deleteChoice(qc) {
 		this.choices = this.choices.filter((c) => c !== qc);
 		this.normalize();
@@ -106,6 +120,21 @@ class Question extends Model {
 		if (!this.correct || this.choices.indexOf(this.correct) === -1) {
 			this.correct = this.choices[0];
 		}
+	}
+
+	serialize() {
+		const choices = {};
+		this.choices.forEach((c) => {
+			choices[this.letterForChoice(c)] = c.text;
+		});
+		return {
+			id: this.id,
+			index: this.index,
+			text: this.text,
+			explanation: this.explanation,
+			correct: this.letterForChoice(this.correct),
+			choices: choices,
+		};
 	}
 }
 

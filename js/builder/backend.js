@@ -8,6 +8,16 @@ class Backend extends HTTPBackend {
 	retrieveQuiz() {
 		return this.issueRequest('retrieve');
 	}
+
+	updateQuiz(data) {
+		return this.issueRequest('update', data);
+	}
 }
 
-module.exports = {Backend};
+const SaveState = {
+	SAVED: 0,
+	SAVING: 1,
+	DIRTY: 2,
+};
+
+module.exports = {Backend, SaveState};
