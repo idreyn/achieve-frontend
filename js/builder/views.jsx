@@ -47,16 +47,6 @@ let QuizBuilder = React.createClass({
 		}, 100);
 	},
 
-	componentDidUpdate(prevProps, prevState) {
-		this.wantsToExpandQuestion = this.isEditingQuestions() &&
-			!this.state.inPreview;
-		if (this.isEditingMarkdown()) {
-			const height = this.refs.builder.getBoundingClientRect().height;
-			const cm = this.refs.editor.getCodeMirror();
-			cm.setSize("100%", height);
-		}
-	},
-
 	getQuizID() {
 		return window.location.pathname.split("/")[2];
 	},
@@ -80,6 +70,11 @@ let QuizBuilder = React.createClass({
 
 	componentDidUpdate(prevProps, prevState) {
 		const {quiz} = this.props;
+		if (this.isEditingMarkdown() && !this.isEditingMarkdown(prevState)) {
+			const height = this.refs.builder.getBoundingClientRect().height;
+			const cm = this.refs.editor.getCodeMirror();
+			cm.setSize("100%", height);
+		}
 		if (prevProps.quiz !== quiz) {
 			if (this.state.expandedQuestion) {
 				this.setState({
@@ -91,20 +86,20 @@ let QuizBuilder = React.createClass({
 		}
 	},
 
-	isEditingQuestions() {
-		return this.state.activeTab === 2;
+	isEditingQuestions(state) {
+		return (state || this.state).activeTab === 2;
 	},
 
-	isEditingBody() {
-		return this.state.activeTab === 1;
+	isEditingBody(state) {
+		return (state || this.state).activeTab === 1;
 	},
 
-	isEditingEmail() {
-		return this.state.activeTab === 0;
+	isEditingEmail(state) {
+		return (state || this.state).activeTab === 0;
 	},
 
-	isEditingMarkdown() {
-		return !this.isEditingQuestions();
+	isEditingMarkdown(state) {
+		return !this.isEditingQuestions(state);
 	},
 
 	expandQuestion(qs, el) {
@@ -223,9 +218,8 @@ let QuizBuilder = React.createClass({
 					style={{width: "50%"}}
 					activeTab={this.state.activeTab}
 					onChange={(i) => {
-						if (this.state.activeState !== i) {
-							this.setState({activeTab: i});
-						}
+						this.setState({activeTab: i});
+						this.forceUpdate();
 					}}
 				>
 					<Tab href="javascript:void(0)">Email</Tab>
@@ -347,7 +341,6 @@ let QuestionList = React.createClass({
 	handleReorder(...args) {
 		const newOrder = args[4];
 		this.props.quiz.reorder(newOrder);
-		console.log(this.props.quiz.questions);
 		this.props.onUpdate();
 	},
 
