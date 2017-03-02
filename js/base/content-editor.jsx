@@ -12,6 +12,7 @@ let ContentEditor = React.createClass({
 		inline: React.PropTypes.bool,
 		multiline: React.PropTypes.bool.isRequired,
 		onContentUpdate: React.PropTypes.func.isRequired,
+		onFocus: React.PropTypes.func,
 		placeholder: React.PropTypes.string,
 		simple: React.PropTypes.bool,
 	},
@@ -27,6 +28,8 @@ let ContentEditor = React.createClass({
 		return {
 			editing: false,
 			editingValue: this.props.content,
+			selectionStart: 0,
+			selectionEnd: 0,
 		};
 	},
 
@@ -50,14 +53,19 @@ let ContentEditor = React.createClass({
 	handleChange(e) {
 		this.setState({
 			editingValue: e.target.value,
+			selectionStart: e.target.selectionStart,
+			selectionEnd: e.target.selectionEnd,
 		});
 	},
 
-	componentDidUpdate() {
-		if(this.refs.input) {
+	componentDidUpdate(prevProps, prevState) {
+		if(this.refs.input && this.state.editing !== prevState.editing) {
 			let input = ReactDOM.findDOMNode(this.refs.input);
 			input.focus();
-			input.setSelectionRange(input.value.length, input.value.length);
+			input.setSelectionRange(
+				input.value.length,
+				input.value.length
+			);
 		}
 	},
 
@@ -86,12 +94,14 @@ let ContentEditor = React.createClass({
 	},
 
 	renderInside() {
-		let {content, inputStyle, multiline, placeholder, simple} = this.props;
+		let {content, inputStyle, multiline,
+			onFocus, placeholder, simple} = this.props;
 		if (this.state.editing) {
 			return multiline? <textarea
 				className={css(styles.input, styles.textArea)}
 				ref='input'
 				onBlur={this.handleBlur}
+				onFocus={onFocus}
 				onChange={this.handleChange}
 				style={inputStyle}
 				value={(this.state.editingValue || "").trimLeft()}
@@ -99,6 +109,7 @@ let ContentEditor = React.createClass({
 				className={css(styles.input)}
 				type='text'
 				ref='input'
+				onFocus={onFocus}
 				onBlur={this.handleBlur}
 				onChange={this.handleChange}
 				onKeyDown={

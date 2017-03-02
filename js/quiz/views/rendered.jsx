@@ -11,7 +11,11 @@ let RenderedView = React.createClass({
 	},
 
 	renderText: function(text) {
-		return this.markdown(this.katexify(text));
+		try {
+			return this.markdown(this.katexify(text));
+		} catch(e) {
+			return "<b>Render error: invalid markup</b>";
+		}
 	},
 
 	markdown: function(text) {

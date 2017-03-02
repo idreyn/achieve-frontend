@@ -1,4 +1,4 @@
-const Model = require('../model.js');
+const Model = require('../../model.js');
 
 class Quiz extends Model {
 	constructor(object) {
@@ -49,6 +49,7 @@ class Quiz extends Model {
 			title: this.title,
 			subtitle: this.subtitle,
 			text: this.text,
+			email: this.email,
 			questions: this.questions.map(q => q.serialize())
 		}
 	}
@@ -135,6 +136,17 @@ class Question extends Model {
 			correct: this.letterForChoice(this.correct),
 			choices: choices,
 		};
+	}
+
+	validate() {
+		return (
+			this.text && this.text.length &&
+			this.choices.length > 1
+		);
+	}
+
+	validationText() {
+		return "Requires text and at least two choices."
 	}
 }
 

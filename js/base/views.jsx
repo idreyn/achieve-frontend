@@ -2,6 +2,8 @@ let React = require('react');
 let FontAwesome = require('react-fontawesome');
 let classNames = require("classnames");
 
+require('react-mdl');
+
 let AppFrame = React.createClass({
 	render() {
 		return <div id="app-frame-outer" className={this.props.className}>

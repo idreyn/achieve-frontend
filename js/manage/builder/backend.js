@@ -1,4 +1,4 @@
-let {HTTPBackend} = require('../backend.js');
+let {HTTPBackend} = require('../../backend.js');
 
 class Backend extends HTTPBackend {
 	constructor(id) {
@@ -11,6 +11,16 @@ class Backend extends HTTPBackend {
 
 	updateQuiz(data) {
 		return this.issueRequest('update', data);
+	}
+
+	// Deploy with an optional test email
+	// if email is set, it will only send to that address
+	deployQuiz(email, abandon) {
+		return this.issueRequest('deploy', {email, abandon});
+	}
+
+	deployStatus() {
+		return this.issueRequest('deploy-status');
 	}
 }
 

@@ -7,6 +7,7 @@ let React = require('react');
 let {render} = require('react-dom');
 let $ = require('jquery');
 let {Question, Quiz, Progress} = require('./models.js');
+let {Deploy} = require('./deploy.js');
 let {QuizView, QuestionView} = require('./views/views.jsx');
 let {Backend} = require('./backend.js');
 

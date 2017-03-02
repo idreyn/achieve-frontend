@@ -8,18 +8,21 @@ let CodeMirror = require("react-codemirror");
 require('codemirror/mode/markdown/markdown');
 require("codemirror/lib/codemirror.css");
 
-let {AppFrame, DragHandle} = require("./../base/views.jsx");
-let ContentEditor = require("./../base/content-editor.jsx");
+let {EMAIL_REGEX} = require("./../../base/util.js");
+let {AppFrame, DragHandle} = require("./../../base/views.jsx");
+let ContentEditor = require("./../../base/content-editor.jsx");
 
 let {SaveState} = require('./backend.js');
 let {Quiz, Question} = require('./quiz.js');
-let RenderedView = require('../quiz/views/rendered.jsx');
+let {DeployStatus} = require('./deploy.js');
+let RenderedView = require('../../quiz/views/rendered.jsx');
 
 let {
 	Button,
 	Card, CardTitle, CardText, CardActions,
 	Dialog, DialogTitle, DialogContent, DialogActions,
 	Icon, IconButton,
+	ProgressBar,
 	Radio, RadioGroup,
 	Tabs, Tab,
 	Textfield,
@@ -32,6 +35,7 @@ let QuizBuilder = React.createClass({
 			activeTab: 2,
 			expandedQuestion: null,
 			inPreview: false,
+			deploying: false,
 		};
 	},
 
@@ -47,6 +51,13 @@ let QuizBuilder = React.createClass({
 		}, 100);
 	},
 
+	componentWillReceiveProps(nextProps) {
+		if(nextProps.deploy 
+			&& nextProps.deploy.status === DeployStatus.STARTED) {
+			this.setState({deploying: true});
+		}
+	},
+
 	getQuizID() {
 		return window.location.pathname.split("/")[2];
 	},
@@ -55,8 +66,8 @@ let QuizBuilder = React.createClass({
 		let {quiz} = this.props;
 		if (this.isEditingBody()) {
 			return quiz.text;
-		} else {
-			return "";
+		} else if (this.isEditingEmail()) {
+			return quiz.email;
 		}
 	},
 
@@ -64,13 +75,19 @@ let QuizBuilder = React.createClass({
 		let {quiz} = this.props;
 		if (this.isEditingBody()) {
 			quiz.text = text;
+		} else if (this.isEditingEmail()) {
+			quiz.email = text;
 		}
 		this.props.onUpdate();
 	},
 
 	componentDidUpdate(prevProps, prevState) {
 		const {quiz} = this.props;
-		if (this.isEditingMarkdown() && !this.isEditingMarkdown(prevState)) {
+		if (
+			((this.isEditingMarkdown() !== this.isEditingMarkdown(prevState)) ||
+			(this.state.inPreview !== prevState.inPreview)) &&
+			this.refs.editor
+		) {
 			const height = this.refs.builder.getBoundingClientRect().height;
 			const cm = this.refs.editor.getCodeMirror();
 			cm.setSize("100%", height);
@@ -142,13 +159,14 @@ let QuizBuilder = React.createClass({
 	},
 
 	renderHeader() {
-		let {quiz} = this.props;
+		let {quiz, onDeferSave} = this.props;
 		return <div>
 			<div>
 				<ContentEditor 
 					simple
 					multiline={false} 
 					content={quiz.title}
+					onFocus={onDeferSave}
 					placeholder={"Click to name OTA"}
 					inputStyle={{color: "#FFF", fontFamily: "inherit"}}
 					onContentUpdate={(c) => {
@@ -160,6 +178,7 @@ let QuizBuilder = React.createClass({
 			<div style={{fontSize: "0.5em"}}>
 				<ContentEditor 
 					simple
+					onFocus={onDeferSave}
 					multiline={false} 
 					content={quiz.subtitle}
 					placeholder={"Click to add subtitle"}
@@ -174,7 +193,7 @@ let QuizBuilder = React.createClass({
 	},
 
 	renderCurrentEditor() {
-		let {quiz, saveState, onUpdate} = this.props;
+		let {quiz, saveState, onUpdate, onDeferSave} = this.props;
 		let {activeTab, expandedQuestion} = this.state;
 		if (this.isEditingQuestions()) {
 			return <QuestionList
@@ -185,6 +204,7 @@ let QuizBuilder = React.createClass({
 				onCreateQuestion={this.handleCreateQuestion}
 				onDeleteQuestion={this.handleDeleteQuestion}
 				onUpdate={onUpdate}
+				onDeferSave={onDeferSave}
 			/>;
 		} else {
 			return <CodeMirror 
@@ -201,11 +221,11 @@ let QuizBuilder = React.createClass({
 	},
 
 	renderMain() {
-		let {quiz, onSave, saveState} = this.props;
+		let {quiz, deploy, onDeploy, onSave, saveState} = this.props;
 		let {inPreview} = this.state;
 		let savingText = {
 			[SaveState.SAVED]: "Saved",
-			[SaveState.SAVING]: "Saving...",
+			[SaveState.SAVING]: "Saving",
 			[SaveState.DIRTY]: "Save",
 		}[saveState];
 		return <AppFrame
@@ -283,16 +303,26 @@ let QuizBuilder = React.createClass({
 							{savingText}
 						</Button>
 					}
-					<Button ripple raised colored className="icon-button">
+					<Button
+						ripple raised colored
+						className="icon-button"
+						onClick={() => this.setState({deploying: true})}
+					>
 						<Icon name="send"/>
-						Send
+						Deploy
 					</Button>
 				</div>
 			</div>
 			<section id="builder" ref="builder" className="app-frame-content">
 				{this.renderCurrentEditor()}
 			</section>
-			<DeployManager open={false} quiz={quiz}/>
+			<DeployManager
+				open={this.state.deploying}
+				quiz={quiz}
+				deploy={deploy}
+				onDeploy={onDeploy}
+				onCancel={() => this.setState({deploying: false})}
+			/>
 		</AppFrame>;
 	},
 
@@ -300,9 +330,7 @@ let QuizBuilder = React.createClass({
 		let {quiz, saveState} = this.props;
 		let {inPreview} = this.state;
 		if(!quiz) {
-			return <div>
-				Hold on a damn second...
-			</div>;
+			return null;
 		}
 		if (inPreview) {
 			return <div id="preview-container">
@@ -322,6 +350,7 @@ let QuestionList = React.createClass({
 		onCloseQuestion: React.PropTypes.func.isRequired,
 		onExpandQuestion: React.PropTypes.func.isRequired,
 		onCreateQuestion: React.PropTypes.func.isRequired,
+		onDeferSave: React.PropTypes.func.isRequired,
 		onUpdate: React.PropTypes.func.isRequired,
 		quiz: React.PropTypes.instanceOf(Quiz).isRequired,
 	},
@@ -359,6 +388,7 @@ let QuestionList = React.createClass({
 					onClose={this.props.onCloseQuestion}
 					onCreate={this.props.onCreateQuestion}
 					onUpdate={this.props.onUpdate}
+					onDeferSave={this.props.onDeferSave}
 				/>
 			</div>
 		</div>;
@@ -394,6 +424,7 @@ let QuestionView = React.createClass({
 		onCreate: React.PropTypes.func,
 		onExpand: React.PropTypes.func,
 		onDelete: React.PropTypes.func.isRequired,
+		onDeferSave: React.PropTypes.func.isRequired,
 		onUpdate: React.PropTypes.func.isRequired,
 		quiz: React.PropTypes.instanceOf(Quiz).isRequired,
 		question: React.PropTypes.instanceOf(Question).isRequired,
@@ -420,6 +451,7 @@ let QuestionView = React.createClass({
 					onContentUpdate={this.handleUpdateChoice}
 					onSelectAsCorrect={this.handleSetCorrectChoice}
 					onDelete={this.handleDeleteChoice}
+					onDeferSave={this.props.onDeferSave}
 					choice={props.item}
 					correct={props.item === this.props.question.correct}
 				/>
@@ -481,7 +513,7 @@ let QuestionView = React.createClass({
 	
 	render() {
 		const style = {cursor: this.props.expanded ? 'inherit' : 'pointer'};
-		const {expanded, question, onDelete} = this.props;
+		const {expanded, question, onDelete, onDeferSave} = this.props;
 		const {deleting} = this.state;
 		return <div
 			className={classNames(
@@ -498,11 +530,25 @@ let QuestionView = React.createClass({
 					{expanded ?
 						<ContentEditor
 							multiline={true}
+							onFocus={onDeferSave}
 							onContentUpdate={this.handleUpdateText}
 							content={question.text}
 							placeholder={"Click to add question text"}
 						/> : 
-						<RenderedView text={question.text}/>}
+						<span style={{display: "flex", alignItems: "center"}}>
+							<RenderedView text={
+								question.text || "Click to edit"
+							}/>
+								{!question.validate() && <Tooltip
+									label={question.validationText()}
+								>
+								<i
+									style={{fontSize: 16, marginLeft: 5}}
+									className="material-icons">
+									warning
+								</i>
+							</Tooltip>}
+						</span>}
 				</CardTitle>
 				{expanded && <div>
 					<Reorder
@@ -519,6 +565,7 @@ let QuestionView = React.createClass({
 						<Card shadow={0}>
 							<ContentEditor
 								multiline={false}
+								onFocus={onDeferSave}
 								onContentUpdate={(text) => {
 									if (text && text.length) {
 										this.handleAddChoice(text);
@@ -536,6 +583,7 @@ let QuestionView = React.createClass({
 									this.handleUpdateExplanation(text);
 									return true;
 								}}
+								onFocus={onDeferSave}
 								content={question.explanation}
 								placeholder={
 									"Click to explain the correct answer"
@@ -571,6 +619,7 @@ let QuestionChoice = React.createClass({
 	propTypes: {
 		correct: React.PropTypes.bool.isRequired,
 		onDelete: React.PropTypes.func.isRequired,
+		onDeferSave: React.PropTypes.func.isRequired,
 		choice: React.PropTypes.object.isRequired,
 	},
 
@@ -582,7 +631,7 @@ let QuestionChoice = React.createClass({
 	},
 
 	render() {
-		let {choice, correct, onDelete, 
+		let {choice, correct, onDelete, onDeferSave,
 			onSelectAsCorrect, onContentUpdate} = this.props;
 		let {deleting, hover} = this.state;
 		return <Card
@@ -594,6 +643,7 @@ let QuestionChoice = React.createClass({
 			<ContentEditor
 				content={choice.text.toString()}
 				multiline={false}
+				onFocus={onDeferSave}
 				onContentUpdate={(val) => onContentUpdate(choice, val)}
 			/>
 			<div className='question-choice-tools'>
@@ -654,10 +704,42 @@ let DeployManager = React.createClass({
 	propTypes: {
 		quiz: React.PropTypes.instanceOf(Quiz).isRequired,
 		open: React.PropTypes.bool.isRequired,
+		onCancel: React.PropTypes.func.isRequired,
 	},
 
-	render() {
-		return <Dialog open={this.props.open} style={{width: 500}}>
+	getInitialState() {
+		return {
+			action: "dry-run",
+			email: window.localStorage.ACHIEVE_DRY_RUN_EMAIL || "",
+		};
+	},
+
+	canProceed() {
+		const {action, email} = this.state;
+		return action !== "dry-run" || EMAIL_REGEX.test(email);
+	},
+
+	handleChangeAction(e) {
+		this.setState({action: e.target.value});
+	},
+
+	handleUpdateTestEmail(e) {
+		const email = e.target.value;
+		window.localStorage.ACHIEVE_DRY_RUN_EMAIL = email;
+		this.setState({email});
+	},
+
+	renderSharedProps() {
+		return {
+			open: this.props.open,
+			style: {width: 500},
+		};
+	},
+
+	renderStart() {
+		let {open, onDeploy} = this.props;
+		let {action} = this.state;
+		return <Dialog {...this.renderSharedProps()}>
 			<DialogTitle>Ready to deploy?</DialogTitle>
 			<DialogContent>
 				<p>You are about to deploy this quiz to all Achievers.</p>
@@ -665,28 +747,154 @@ let DeployManager = React.createClass({
 				quiz or add/delete questions, so take a moment to make sure
 				everything looks okay. When you're ready, you can deploy or 
 				perform a dry run here.</p>
-				<RadioGroup name="action" value="dry-run" childContainer="div">
+				<RadioGroup
+					name="action"
+					value={this.state.action}
+					childContainer="div"
+					onChange={this.handleChangeAction}
+				>
 					<Radio value="dry-run" ripple>
-						Send a test message to
-						<Textfield 
-							label="Email address"
-							floatingLabel
-							style={{display: "inline"}}
-						/>
+						Send me a test email
 					</Radio>
 					<Radio value="real-thing">
 						Deploy to all Achievers!
 					</Radio>
 				</RadioGroup>
+				{action === "dry-run" && <div style={{marginTop: 10}}>
+					<Textfield
+						floatingLabel
+						label="Email address"
+						value={this.state.email}
+						onChange={this.handleUpdateTestEmail}
+						pattern={EMAIL_REGEX.toString().slice(1,-1)}
+						error="Please enter a valid email address"
+					/>
+				</div>}
 			</DialogContent>
 			<DialogActions>
-				<Button raised colored ripple className="icon-button">
-					<Icon name="thumb_up"/>
+				<Button
+					raised colored ripple 
+					className="icon-button"
+					disabled={!this.canProceed()}
+					onClick={() => onDeploy(
+						this.state.action === "dry-run" ?
+							this.state.email : null
+					)}
+				>
+					<Icon name="send"/>
 					Let's go
 				</Button>
-				<Button>Cancel</Button>
+				<Button onClick={this.props.onCancel}>Close</Button>
 			</DialogActions>
 		</Dialog>
+	},
+
+	renderProcess() {
+		const {deploy} = this.props;
+		return <Dialog {...this.renderSharedProps()}>
+			<DialogTitle>Deploying quiz...</DialogTitle>
+			<DialogContent>
+				<p>Don't close this browser window!</p>
+				{!!deploy.email_total && deploy.email_total > 0 && <div>
+					<ProgressBar 
+						progress={100 * (deploy.email_success) / deploy.email_total}
+						buffer={100 * (
+							deploy.email_success + deploy.email_fail
+						) / deploy.email_total}
+					/>
+					<p>
+						<b>{deploy.email_success}{" "}</b> sent and{" "}
+						<b>{deploy.email_fail}{" "}</b> failed{" "}
+						of{" "}<b>{deploy.email_total}</b>{" "}emails
+					</p>
+				</div>}
+			</DialogContent>
+		</Dialog>
+	},
+
+	renderPartialNotice() {
+		const {deploy, onDeploy, onCancel} = this.props;
+		return <Dialog {...this.renderSharedProps()}>
+			<DialogTitle>Not all emails were sent.</DialogTitle>
+			<DialogContent>
+				<p>The system was able to send <b>{deploy.email_success}</b>
+				{" of "}<b>{deploy.email_total}</b> emails. This is unusual, and repeated
+				failures probably indicate an issue with our Mailgun account.
+				You should re-run the deploy.</p>
+				<p>Failed to send to the following Achievers: 
+					{" "}<b>{deploy.email_pending.join(", ")}</b>
+				</p>
+			</DialogContent>
+			<DialogActions>
+				<Button 
+					raised colored ripple
+					onClick={() => onDeploy(null, true)}
+				>
+					<Icon name="refresh"/>{" "}
+					Retry
+				</Button>
+				<Button onClick={onCancel}>Close</Button>
+			</DialogActions>
+		</Dialog>
+	},
+
+	renderSuccessTestNotice() {
+		const {onDeploy, onCancel} = this.props;
+		return <Dialog {...this.renderSharedProps()}>
+			<DialogTitle>Nice!</DialogTitle>
+			<DialogContent>
+				<p>We successfully deployed a test email. Check your inbox!</p>
+				<p>When you're ready, you can proceed to the real thing.</p>
+			</DialogContent>
+			<DialogActions>
+				<Button 
+					raised colored ripple
+					onClick={() => onDeploy(null, true)}
+				>
+					<Icon name="check"/>{" "}
+					Proceed
+				</Button>
+				<Button onClick={onCancel}>Close</Button>
+			</DialogActions>
+		</Dialog>
+	},
+
+	renderSuccessNotice() {
+		const {onDeploy, onCancel} = this.props;
+		return <Dialog {...this.renderSharedProps()}>
+			<DialogTitle>Deploy successful!</DialogTitle>
+			<DialogContent>
+				<p>All emails were successfully sent.</p>
+				<p>If you want to come back and re-deploy this quiz to future
+				Achievers, you can re-deploy for them below.</p>
+			</DialogContent>
+			<DialogActions>
+				<Button 
+					raised colored ripple
+					onClick={() => onDeploy()}
+				>
+					<Icon name="refresh"/>{" "}
+					Re-deploy
+				</Button>
+				<Button onClick={onCancel}>Close</Button>
+			</DialogActions>
+		</Dialog>
+	},
+
+	render() {
+		const {deploy} = this.props;
+		if (deploy.status === DeployStatus.UNDEPLOYED) {
+			return this.renderStart();
+		} else if (deploy.status === DeployStatus.STARTED) {
+			return this.renderProcess();
+		} else if (deploy.status === DeployStatus.PARTIAL) {
+			return this.renderPartialNotice();
+		} else if (deploy.status === DeployStatus.SUCCESS_TEST) {
+			return this.renderSuccessTestNotice();
+		} else if (deploy.status === DeployStatus.SUCCESS) {
+			return this.renderSuccessNotice();
+		}
+		return null;
 	}
 });
 
