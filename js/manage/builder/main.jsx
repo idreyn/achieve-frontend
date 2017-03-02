@@ -76,6 +76,10 @@ class Controller {
 				if (resp.status === DeployStatus.STARTED) {
 					setTimeout(check, 300);
 				}
+				if (resp.status === DeployStatus.SUCCESS) {
+					this.saveState = SaveState.DIRTY;
+					this.saveQuiz();
+				}
 			})
 		}
 		setTimeout(check, 300);

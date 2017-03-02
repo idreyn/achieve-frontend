@@ -193,7 +193,7 @@ let QuizBuilder = React.createClass({
 	},
 
 	renderCurrentEditor() {
-		let {quiz, saveState, onUpdate, onDeferSave} = this.props;
+		let {quiz, saveState, onUpdate, onDeferSave, deploy} = this.props;
 		let {activeTab, expandedQuestion} = this.state;
 		if (this.isEditingQuestions()) {
 			return <QuestionList
@@ -203,6 +203,7 @@ let QuizBuilder = React.createClass({
 				onCloseQuestion={this.closeAllQuestions}
 				onCreateQuestion={this.handleCreateQuestion}
 				onDeleteQuestion={this.handleDeleteQuestion}
+				canDeleteQuestion={deploy.status !== DeployStatus.SUCCESS}
 				onUpdate={onUpdate}
 				onDeferSave={onDeferSave}
 			/>;
@@ -247,7 +248,10 @@ let QuizBuilder = React.createClass({
 					<Tab href="javascript:void(0)">Questions</Tab>
 				</Tabs>
 				<div id="builder-header-buttons">
-					{this.isEditingQuestions() && (inPreview ?
+					{(
+						this.isEditingQuestions() &&
+						deploy.status !== DeployStatus.SUCCESS
+					) && (inPreview ?
 						<Tooltip label="Add question">
 							<IconButton
 								ripple
@@ -335,7 +339,11 @@ let QuizBuilder = React.createClass({
 		if (inPreview) {
 			return <div id="preview-container">
 				{this.renderMain()}
-				<QuizPreview id={this.getQuizID()} saveState={saveState} />
+				<QuizPreview
+					id={this.getQuizID()}
+					saveState={saveState}
+					previewEmail={this.isEditingEmail()}
+				/>
 			</div>
 		} else {
 			return this.renderMain();
@@ -346,6 +354,7 @@ let QuizBuilder = React.createClass({
 
 let QuestionList = React.createClass({
 	propTypes: {
+		canDeleteQuestion: React.PropTypes.bool.isRequired,
 		expandedQuestion: React.PropTypes.instanceOf(Question),
 		onCloseQuestion: React.PropTypes.func.isRequired,
 		onExpandQuestion: React.PropTypes.func.isRequired,
@@ -389,6 +398,7 @@ let QuestionList = React.createClass({
 					onCreate={this.props.onCreateQuestion}
 					onUpdate={this.props.onUpdate}
 					onDeferSave={this.props.onDeferSave}
+					canDeleteQuestion={this.props.canDeleteQuestion}
 				/>
 			</div>
 		</div>;
@@ -513,7 +523,8 @@ let QuestionView = React.createClass({
 	
 	render() {
 		const style = {cursor: this.props.expanded ? 'inherit' : 'pointer'};
-		const {expanded, question, onDelete, onDeferSave} = this.props;
+		const {canDeleteQuestion, expanded,
+			question, onDelete, onDeferSave} = this.props;
 		const {deleting} = this.state;
 		return <div
 			className={classNames(
@@ -593,7 +604,11 @@ let QuestionView = React.createClass({
 					</div>
 				</div>}
 				{expanded && <CardActions border>
-					<Button onClick={this.handleDeleteClick}>Delete</Button>
+					{canDeleteQuestion && <Button
+						onClick={this.handleDeleteClick}
+					>
+						Delete
+					</Button>}
 					<Button onClick={this.props.onClose}>Close</Button>
 				</CardActions>}
 			</Card>
@@ -684,6 +699,7 @@ let QuestionChoice = React.createClass({
 let QuizPreview = React.createClass({
 	propTypes: {
 		id: React.PropTypes.string.isRequired,
+		previewEmail: React.PropTypes.bool.isRequired,
 		saveState: React.PropTypes.oneOf(Object.values(SaveState)).isRequired,
 	},
 
@@ -694,9 +710,13 @@ let QuizPreview = React.createClass({
 		}
 	},
 
+	renderUrl() {
+		const {id, previewEmail} = this.props;
+		return "/manage/" + id + "/" + (previewEmail ? "email" : "view") + "/";
+	},
+
 	render() {
-		const {id} = this.props;
-		return <iframe ref="frame" src={"/manage/" + id + "/view/"}/>;
+		return <iframe ref="frame" src={this.renderUrl()}/>;
 	},
 });
 
